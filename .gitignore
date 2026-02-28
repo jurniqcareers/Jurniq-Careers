@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 *.js
 *.js.map
+functions/.env.jurniqcareers
+.env
