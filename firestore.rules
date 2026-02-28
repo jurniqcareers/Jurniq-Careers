@@ -1,0 +1,117 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is an admin
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'jurniqcareers@gmail.com' || 
+        request.auth.token.email == 'chairman@balitandsons.com'
+      );
+    }
+
+    // 1. Users Collection
+    // Allow admins to read all users (for dashboard)
+    // Allow users to read/update only their own data
+    match /users/{userId} {
+      allow read: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow update: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+      allow create: if request.auth != null;
+    }
+
+    // 2. Session Registrations: Open access
+    match /session_registrations/{document=**} {
+      allow read, write: if true;
+    }
+
+    // 2.5 Sessions: Open read access
+    match /sessions/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Blogs
+    match /blogs/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null && (isAdmin() || exists(/databases/$(database)/documents/authors/$(request.auth.uid)));
+    }
+    
+    // Authors
+    match /authors/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 3. Analytics & Activity Logs
+    // Allow WRITE by anyone (even anonymous users need to track visits)
+    // Allow READ only by Admins
+    match /analytics/{document=**} {
+      allow write: if true;
+      allow read: if isAdmin(); 
+    }
+    match /activity_logs/{document=**} {
+      allow write: if true;
+      allow read: if isAdmin();
+    }
+    
+    // 4. Teacher Reviews
+    match /reviews/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // 5. Tests (Teacher/Student)
+    match /tests/{document=**} {
+      allow read, write: if true; // Simplified for demo, ideally restrict to teacher/student
+    }
+    
+    // 6. Teacher Students List
+    match /teachers/{teacherId}/students/{studentId} {
+        allow read, write: if request.auth != null;
+    }
+
+    // 7. General Access Rule (Classes, Subjects, etc.)
+    // Allow read for everyone (so content loads)
+    // Allow write only for authenticated users (or restrict to admins if needed)
+    match /classes/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Rule for Profile Images
+    match /profile_images/{userId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+                     request.auth.uid == userId &&
+                     request.resource.contentType.matches('image/(png|jpeg|jpg)') &&
+                     request.resource.size < 2 * 1024 * 1024;
+    }
+    
+    // Rule for Teacher Notes
+    // Public Read enabled as requested
+    match /notes/{userId}/{allPaths=**} {
+      allow read: if true; 
+      
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId
+                   && request.resource.size < 15 * 1024 * 1024 // 15MB Limit
+                   && (
+                     request.resource.contentType == 'application/pdf' ||
+                     request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+                     request.resource.contentType == 'text/plain'
+                   );
+    }
+
+    // Rule for Web Images
+    // Public Read enabled as requested
+    match /web_images/{allPaths=**} {
+        allow read: if true;
+        allow write: if request.auth != null; // Restricted write to authenticated users
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+
+    "rewrites": [
+      {
+        "source": "/api/create-order",
+        "function": "createOrder"
+      },
+      {
+        "source": "/api/create-session-order",
+        "function": "createSessionOrder"
+      },
+      {
+        "source": "/api/send-contact-email",
+        "function": "sendContactEmail"
+      },
+      {
+        "source": "/api/send-consultation-email",
+        "function": "sendConsultationEmail"
+      },
+      {
+        "source": "/api/cashfree-webhook",
+        "function": "cashfreeWebhook"
+      },
+      {
+        "source": "/api/session-webhook",
+        "function": "sessionWebhook"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}
